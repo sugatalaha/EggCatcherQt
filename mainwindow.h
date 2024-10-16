@@ -63,6 +63,9 @@ private:
     void draw_dda_line(int x1,int y1,int x2,int y2,int r,int g,int b);
     void draw_bressenham_line(int x1,int y1,int x2,int y2,int r,int g,int b);
     void plotPixel(int x,int y,int r,int g,int b);
+    void plotPoints(QPolygon, QColor);
+    void markBoxes(QPolygon, QColor, int);
+    QPoint transform(QPoint);
     void draw_bressenham_ellipse(int x_center,int y_center,int a,int b);
     void updateGame();
     void clear_canvas();
