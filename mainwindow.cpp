@@ -22,10 +22,11 @@
 #define basket_height 100
 #define basket_width 100
 #define speed_parameter 30
+#define min_X -300
+#define max_X 300
+#define start_Y 300
 
 using namespace std;
-int X_center=-230;
-int Y_center=230;
 int score=0;
 
 bool game_closed=false;
@@ -37,26 +38,6 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void generate_eggs(int start_x)
-{
-    for(int i=0;i<initial_eggs;i++)
-    {
-        egg_array.push_back(Egg(start_x,Y_center));
-        start_x+=30;
-    }
-    start_x+=100;
-    for(int i=0;i<initial_eggs;i++)
-    {
-        egg_array.push_back(Egg(start_x,Y_center));
-        start_x+=30;
-    }
-    start_x+=100;
-    for(int i=0;i<initial_eggs;i++)
-    {
-        egg_array.push_back(Egg(start_x,Y_center));
-        start_x+=30;
-    }
-}
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -70,7 +51,13 @@ MainWindow::MainWindow(QWidget *parent)
         canvas.fill(Qt::white);
         ui->workArea->setPixmap(canvas);
     }
-    generate_eggs(-400);
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distrib(min_X, max_X);
+
+    // Generate random number in the range [min, max]
+    int start_X= distrib(gen);
+    egg_array.push_back(Egg(start_X,start_Y));
     bs=Basket(0,baseLine_y);
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::gameLoop);
@@ -113,13 +100,11 @@ void MainWindow::markBox(int x,int y,int r,int g,int b)
 
 void MainWindow::plotPixel(int x,int y,int r,int g,int b)
 {
-    MainWindow::polygon_points.push_back({x,y});
     int centerX=(ui->workArea->width())/2;
     int centerY=ui->workArea->height()/2;
     int newX=x*GridOffset+centerX;
     int newY=centerY-y*GridOffset;
     markBox(newX,newY,r,g,b);
-    MainWindow::drawn_points.insert({x,y,r,g,b});
 }
 
 void MainWindow::gameLoop() {
@@ -147,7 +132,13 @@ void MainWindow::gameLoop() {
     }
     if(frame_count%10==0)
     {
-        generate_eggs(-400);
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<> distrib(min_X, max_X);
+
+        // Generate random number in the range [min, max]
+        int start_X= distrib(gen);
+        egg_array.push_back(Egg(start_X,start_Y));
     }
     frame_count++;
 }
@@ -208,7 +199,6 @@ void MainWindow::draw_bressenham_line(int x1, int y1, int x2, int y2,int r,int g
         for (int i = 0; i <= dx; i++)
         {
             // Convert grid coordinates back to screen coordinates and plot
-            MainWindow::polygon_points.push_back({x,y});
             MainWindow::plotPixel(x,y,r,g,b);
             // Update p and x, y
             if (p >= 0)
@@ -227,7 +217,6 @@ void MainWindow::draw_bressenham_line(int x1, int y1, int x2, int y2,int r,int g
         for (int i = 0; i <= dy; i++)
         {
             // Convert grid coordinates back to screen coordinates and plot
-            MainWindow::polygon_points.push_back({x,y});
             MainWindow::plotPixel(x,y,0,255,0);
 
             // Update p and x, y
