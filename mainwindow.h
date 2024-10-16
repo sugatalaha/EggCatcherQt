@@ -71,10 +71,6 @@ private:
     void clear_canvas();
     void draw_basket();
     QPoint clickedPoint;
-    QSet<QVector<int>> drawn_points;
-    QVector<pair<int,int>> polygon_points;
-    QVector<pair<int,int>> vertices;
     QTimer *timer;    // Timer for controlling the game loop
-    int playerX, playerY;
 };
 #endif // MAINWINDOW_H
