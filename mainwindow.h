@@ -59,10 +59,10 @@ private:
     Ui::MainWindow *ui;
     void colorPoint(int x,int y,int r,int g, int b, int penwidth);
     void delay(int ms);
-    void markBox(int x,int y,int r,int g,int b);
+    pair<int,int> markBox(int x,int y);
     void draw_dda_line(int x1,int y1,int x2,int y2,int r,int g,int b);
     void draw_bressenham_line(int x1,int y1,int x2,int y2,int r,int g,int b);
-    void plotPixel(int x,int y,int r,int g,int b);
+    pair<int,int> plotPixel(int x,int y);
     void draw_bressenham_ellipse(int x_center,int y_center,int a,int b);
     void updateGame();
     void clear_canvas();

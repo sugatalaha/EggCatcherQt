@@ -83,7 +83,7 @@ void MainWindow::colorPoint(int x, int y, int r, int g, int b, int penwidth=1) {
 
 
 
-void MainWindow::markBox(int x,int y,int r,int g,int b)
+pair<int,int> MainWindow::markBox(int x,int y)
 {
     int width = ui->workArea->width();
     int height = ui->workArea->height();
@@ -95,16 +95,16 @@ void MainWindow::markBox(int x,int y,int r,int g,int b)
     int Y=floor((centerY-y)*1.0/GridOffset);
     int calcX=X*GridOffset+centerX+GridOffset/2.0;
     int calcY=centerY-Y*GridOffset-GridOffset/2.0;
-    colorPoint(calcX,calcY,r,g,b,GridOffset);
+    return {calcX,calcY};
 }
 
-void MainWindow::plotPixel(int x,int y,int r,int g,int b)
+pair<int,int> MainWindow::plotPixel(int x,int y)
 {
     int centerX=(ui->workArea->width())/2;
     int centerY=ui->workArea->height()/2;
     int newX=x*GridOffset+centerX;
     int newY=centerY-y*GridOffset;
-    markBox(newX,newY,r,g,b);
+    return markBox(newX,newY);
 }
 
 void MainWindow::gameLoop() {
@@ -177,51 +177,42 @@ void MainWindow::paintEvent(QPaintEvent *event) {
 }
 
 
-void MainWindow::draw_bressenham_line(int x1, int y1, int x2, int y2,int r,int g,int b)
-{
+void MainWindow::draw_bressenham_line(int x1, int y1, int x2, int y2, int r, int g, int b) {
+    QPolygon polygon;
+
     // Calculate the differences
     int dx = abs(x2 - x1);
     int dy = abs(y2 - y1);
 
     // Determine if we are stepping in the positive or negative direction
     int sx = (x1 < x2) ? 1 : -1;
-    int sy = (y1< y2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
 
     // Initial coordinates
     int x = x1;
     int y = y1;
 
     // Handle both slope cases |m| <= 1 and |m| > 1
-    if (dx >= dy)
-    {
+    if (dx >= dy) {
         // Case 1: Slope is less than or equal to 1 (|m| <= 1)
         int p = 2 * dy - dx;
-        for (int i = 0; i <= dx; i++)
-        {
-            // Convert grid coordinates back to screen coordinates and plot
-            MainWindow::plotPixel(x,y,r,g,b);
-            // Update p and x, y
-            if (p >= 0)
-            {
+        for (int i = 0; i <= dx; i++) {
+            pair<int,int> point_pair=plotPixel(x,y);
+            polygon << QPoint(point_pair.first, point_pair.second); // Collect points into the polygon
+            if (p >= 0) {
                 y += sy;
                 p -= 2 * dx;
             }
             p += 2 * dy;
             x += sx;
         }
-    }
-    else
-    {
+    } else {
         // Case 2: Slope is greater than 1 (|m| > 1)
         int p = 2 * dx - dy;
-        for (int i = 0; i <= dy; i++)
-        {
-            // Convert grid coordinates back to screen coordinates and plot
-            MainWindow::plotPixel(x,y,0,255,0);
-
-            // Update p and x, y
-            if (p >= 0)
-            {
+        for (int i = 0; i <= dy; i++) {
+            pair<int,int> point_pair=plotPixel(x,y);
+            polygon << QPoint(point_pair.first, point_pair.second);
+            if (p >= 0) {
                 x += sx;
                 p -= 2 * dy;
             }
@@ -229,50 +220,65 @@ void MainWindow::draw_bressenham_line(int x1, int y1, int x2, int y2,int r,int g
             y += sy;
         }
     }
+
+    // Now draw all the points at once using QPainter
+    QPixmap canvas = ui->workArea->pixmap();
+    QPainter painter(&canvas);
+    painter.setPen(QPen(QColor(r, g, b), 1)); // Set the color and pen width
+    painter.drawPoints(polygon); // Draw the entire polygon (batch of points)
+    ui->workArea->setPixmap(canvas); // Update the canvas
 }
 
+void MainWindow::draw_bressenham_ellipse(int x_center, int y_center, int a, int b) {
+    QPolygon polygon;
 
-
-void MainWindow::draw_bressenham_ellipse(int x_center,int y_center,int a,int b)
-{
-    int x=0,y=b;
-    double d1=b*b-a*a*b+(0.25*a*a);
-    while(b*b*x<a*a*y)
-    {
-        plotPixel(x_center+x,y_center+y,0,0,0);
-        plotPixel(x_center-x,y_center+y,0,0,0);
-        plotPixel(x_center-x,y_center-y,0,0,0);
-        plotPixel(x_center+x,y_center-y,0,0,0);
-        if(d1<0)
-        {
-            d1+=b*b*(1+2*x);
-        }
-        else
-        {
-            d1+=b*b*(2*x+3)+a*a*(2-2*y);
+    int x = 0, y = b;
+    double d1 = b * b - a * a * b + (0.25 * a * a);
+    while (b * b * x < a * a * y) {
+        pair<int,int> point_pair=plotPixel(x_center+x,y_center+y);
+        polygon << QPoint(point_pair.first, point_pair.second);
+        point_pair=plotPixel(x_center-x,y_center+y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        point_pair=plotPixel(x_center-x,y_center-y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        point_pair=plotPixel(x_center+x,y_center-y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        if (d1 < 0) {
+            d1 += b * b * (1 + 2 * x);
+        } else {
+            d1 += b * b * (2 * x + 3) + a * a * (2 - 2 * y);
             y--;
         }
         x++;
     }
-    double d2=b*b*(x+0.5)*(x-0.5)+a*a*(y-1)*(y-1)-a*a*b*b;
-    while(y>=0)
-    {
-        if(d2<0)
-        {
-            d2+=b*b*(2*x+2)+a*a*(-2*y+3);
+
+    double d2 = b * b * (x + 0.5) * (x + 0.5) + a * a * (y - 1) * (y - 1) - a * a * b * b;
+    while (y >= 0) {
+        pair<int,int> point_pair=plotPixel(x_center+x,y_center+y);
+        polygon << QPoint(point_pair.first, point_pair.second);
+        point_pair=plotPixel(x_center-x,y_center+y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        point_pair=plotPixel(x_center-x,y_center-y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        point_pair=plotPixel(x_center+x,y_center-y);
+        polygon<< QPoint(point_pair.first,point_pair.second);
+        if (d2 < 0) {
+            d2 += b * b * (2 * x + 2) + a * a * (-2 * y + 3);
             x++;
-        }
-        else
-        {
-            d2+=a*a*(-2*y+3);
+        } else {
+            d2 += a * a * (-2 * y + 3);
         }
         y--;
-        plotPixel(x_center+x,y_center+y,0,0,0);
-        plotPixel(x_center-x,y_center+y,0,0,0);
-        plotPixel(x_center-x,y_center-y,0,0,0);
-        plotPixel(x_center+x,y_center-y,0,0,0);
     }
+
+    // Draw all points in one go using QPainter
+    QPixmap canvas = ui->workArea->pixmap();
+    QPainter painter(&canvas);
+    painter.setPen(QPen(Qt::black, 1)); // Set pen color to black for the ellipse
+    painter.drawPoints(polygon); // Draw the collected points
+    ui->workArea->setPixmap(canvas); // Update the canvas
 }
+
 
 void MainWindow::clear_canvas()
 {
