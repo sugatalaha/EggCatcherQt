@@ -67,6 +67,7 @@ private:
     void updateGame();
     void clear_canvas();
     void draw_basket();
+    void resetGame();
     QPoint clickedPoint;
     QTimer *timer;    // Timer for controlling the game loop
 };

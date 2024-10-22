@@ -8,6 +8,8 @@
 #include<bits/stdc++.h>
 #include<QElapsedTimer>
 #include <QDebug>
+#include<QMessageBox>
+
 #define maxHt 1000
 #define maxVt 1000
 #define PI 180
@@ -25,14 +27,19 @@
 #define min_X -300
 #define max_X 300
 #define start_Y 300
+#define basket_offset 100
 
 using namespace std;
 int score=0;
+int lives=5;
 
 bool game_closed=false;
 
 Basket bs;
 QVector<Egg> egg_array;
+int lanes[]={-250,-150,-50,50,150,250};
+
+
 MainWindow::~MainWindow()
 {
     delete ui;
@@ -53,18 +60,17 @@ MainWindow::MainWindow(QWidget *parent)
     }
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> distrib(min_X, max_X);
+    uniform_int_distribution<> distrib(0, 5);
 
     // Generate random number in the range [min, max]
-    int start_X= distrib(gen);
-    egg_array.push_back(Egg(start_X,start_Y));
-    bs=Basket(0,baseLine_y);
+    int index= distrib(gen);
+    egg_array.push_back(Egg(lanes[index],start_Y));
+    bs=Basket(50,baseLine_y);
+    ui->lives->setText(QString::number(lives));
     timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &MainWindow::gameLoop);
     timer->start(1000/fps);
 }
-
-
 
 void MainWindow::delay(int ms){
     QEventLoop loop;
@@ -80,8 +86,6 @@ void MainWindow::colorPoint(int x, int y, int r, int g, int b, int penwidth=1) {
     painter.drawPoint(x, y);
     ui->workArea->setPixmap(canvas);
 }
-
-
 
 pair<int,int> MainWindow::markBox(int x,int y)
 {
@@ -107,6 +111,26 @@ pair<int,int> MainWindow::plotPixel(int x,int y)
     return markBox(newX,newY);
 }
 
+void MainWindow::resetGame() {
+    lives = 5;
+    score = 0;
+    egg_array.clear();
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> distrib(0, 5);
+
+    // Generate a new egg to start the game again
+    int index = distrib(gen);
+    egg_array.push_back(Egg(lanes[index], start_Y));
+    bs = Basket(50, baseLine_y);
+
+    ui->lives->setText(QString::number(lives));
+    ui->score->setText(QString::number(score));
+
+    // Restart the timer
+    timer->start(1000 / fps);
+}
+
 void MainWindow::gameLoop() {
     // Update the game state and repaint the scene
     static int frame_count=1;
@@ -123,6 +147,34 @@ void MainWindow::gameLoop() {
         else if(iter->y<=baseLine_y)
         {
             iter=egg_array.erase(iter);
+            lives--;
+            ui->lives->setText(QString::number(lives));
+            if(lives<=0)
+            {
+                timer->stop();
+                QMessageBox msgBox;
+                msgBox.setText("Game Over");
+                msgBox.setInformativeText("Better luck next time!");
+                msgBox.setStandardButtons(QMessageBox::Retry | QMessageBox::Close);
+                msgBox.setDefaultButton(QMessageBox::Retry);
+
+                int ret = msgBox.exec();
+
+                switch (ret) {
+                case QMessageBox::Retry:
+                    // Reset the game state
+                    resetGame();
+                    break;
+                case QMessageBox::Close:
+                    // Close the game
+                    game_closed = true;
+                    break;
+                default:
+                    // Should never be reached
+                    break;
+                }
+            }
+
         }
         else
         {
@@ -130,15 +182,15 @@ void MainWindow::gameLoop() {
             iter++;
         }
     }
-    if(frame_count%10==0)
+    if(frame_count%15==0)
     {
         random_device rd;
         mt19937 gen(rd());
-        uniform_int_distribution<> distrib(min_X, max_X);
+        uniform_int_distribution<> distrib(0, 5);
 
         // Generate random number in the range [min, max]
-        int start_X= distrib(gen);
-        egg_array.push_back(Egg(start_X,start_Y));
+        int index= distrib(gen);
+        egg_array.push_back(Egg(lanes[index],start_Y));
     }
     frame_count++;
 }
@@ -151,10 +203,10 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
 
         switch (key) {
         case Qt::Key_Left:
-            if(bs.x-30>=-400)bs.x-=30;
+            if(bs.x-basket_offset>=-250)bs.x-=basket_offset;
             break;
         case Qt::Key_Right:
-            if(bs.x+30<=400)bs.x+=30;
+            if(bs.x+basket_offset<=250)bs.x+=basket_offset;
             break;
         default:
             break;
@@ -174,6 +226,10 @@ void MainWindow::paintEvent(QPaintEvent *event) {
     draw_bressenham_line(bs.x+basket_width/2,bs.y-basket_height/2,bs.x+basket_width/2,bs.y+basket_height/2,0,0,255);
     draw_bressenham_line(bs.x+basket_width/2,bs.y+basket_height/2,bs.x-basket_width/2,bs.y+basket_height/2,0,0,255);
     draw_bressenham_line(bs.x-basket_width/2,bs.y+basket_height/2,bs.x-basket_width/2,bs.y-basket_height/2,0,0,255);
+    for(int y=bs.y-basket_height/2+1;y<bs.y+basket_height/2;y++)
+    {
+        draw_bressenham_line(bs.x-basket_width/2+1,y,bs.x+basket_width/2-1,y,180,250,180);
+    }
 }
 
 
